@@ -6,7 +6,7 @@ Canal público de radicación + motor de clasificación con IA + panel interno p
 
 | Entregable | Dónde está |
 |---|---|
-| Repositorio de GitHub con acceso de lectura | `TODO_URL_REPO` (público) |
+| Repositorio de GitHub con acceso de lectura | [https://github.com/dvnber10/ReclamacionesIA.git] (público) |
 | Canal de radicación desplegado | `TODO_URL_CANAL` |
 | Panel del analista + usuario de prueba | `TODO_URL_PANEL` · `analista@demo.local` / `Demo123*` |
 | README | Este archivo |
