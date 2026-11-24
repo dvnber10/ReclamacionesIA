@@ -405,17 +405,21 @@ Los avisos salen **antes** del vencimiento (`DiasAlerta = 3`), nunca después. E
 
 ## 10. Despliegue en Azure
 
-**Estado actual:** el código está listo para publicarse, pero **aún no hay despliegue en Azure ni infraestructura como código en el repo** (no hay Dockerfile, `docker-compose`, `*.pubxml`, Bicep ni GitHub Actions). Para llevarlo allá haría falta:
+**Estado actual:** aún no hay despliegue en Azure, pero el repo ya incluye `.github/workflows/azure-webapp.yml` para publicar desde GitHub en cada push a `main`. No hay Dockerfile, `docker-compose`, `*.pubxml` ni Bicep. Para llevarlo allá haría falta:
 
 1. **Base de datos:** Azure Database for PostgreSQL Flexible Server (plan gratuito/B1 para la demo), con BD `reclamaciones` y reglas de firewall que permitan el egreso de App Service.
-2. **App Service .NET 8 en Linux:** publicar con:
+2. **App Service .NET 8 en Linux:** crear el App Service y, en **Deployment Center**, elegir GitHub con el repo público y la rama `main`. Si usas el workflow incluido, no actives también el que genera el portal, para evitar dos despliegues por push.
+3. **GitHub Actions:** en el repo, ir a **Settings → Secrets and variables → Actions** y crear:
+   - Variable `AZURE_WEBAPP_NAME` = nombre del App Service.
+   - Secret `AZURE_WEBAPP_PUBLISH_PROFILE` = contenido de **App Service → Get publish profile**.
+   
+   El workflow hace `restore`, `build`, `publish` de `src/WebUI/WebUI.csproj` y despliega con `azure/webapps-deploy@v3`. Alternativamente, se puede publicar a mano:
    ```bash
    dotnet publish src/WebUI/WebUI.csproj -c Release -o ./publish
    cd publish && zip -r ../webui.zip .
-   az webapp deployment source config-zip \
-     --resource-group TODO_RG --name TODO_APP --src ../webui.zip
+   # az webapp deployment source config-zip --resource-group TODO_RG --name TODO_APP --src ../webui.zip
    ```
-3. **Configuración de la app** (en App Service → Configuration → Application settings, con doble guion bajo):
+4. **Configuración de la app** (en App Service → Configuration → Application settings, con doble guion bajo):
    ```text
    ConnectionStrings__Default        = Host=...;Port=5432;Database=reclamaciones;Username=...;Password=...
    IA__Proveedor                     = Gemini
@@ -429,11 +433,11 @@ Los avisos salen **antes** del vencimiento (`DiasAlerta = 3`), nunca después. E
    Email__From                       = <remitente>
    ```
    En un entorno real, estos valores deberían ser referencias a **Azure Key Vault** con identidad administrada, no texto plano.
-4. **Red y egreso:** permitir salida HTTPS a `generativelanguage.googleapis.com`, `api.telegram.org` y el servidor SMTP; integrar la app en VNet si el PostgreSQL usa acceso privado.
-5. **Dominio y TLS:** hostname personalizado con certificado administrado y forzar HTTPS.
-6. **Concurrencia de workers:** hoy los tres `HostedService` viven dentro del proceso web. Si App Service escala a más de una instancia, habría que moverlos a **Azure Functions + Storage Queues** o crear un lock distribuido; si no, dejar `Always On` y una sola instancia para la demo.
-7. **Observabilidad:** agregar un endpoint `/health` y Application Insights para enterarse de fallos antes que el usuario. Hoy la señal disponible es el estado `Fallido` en `outbox` y `Exito = false` en `inferencias_ia`.
-8. **Persistencia de archivos:** `App_Data/uploads` es disco local de App Service; para producción conviene Azure Blob Storage y guardar la URL en `"documentos"."Ruta"`.
+5. **Red y egreso:** permitir salida HTTPS a `generativelanguage.googleapis.com`, `api.telegram.org` y el servidor SMTP; integrar la app en VNet si el PostgreSQL usa acceso privado.
+6. **Dominio y TLS:** hostname personalizado con certificado administrado y forzar HTTPS.
+7. **Concurrencia de workers:** hoy los tres `HostedService` viven dentro del proceso web. Si App Service escala a más de una instancia, habría que moverlos a **Azure Functions + Storage Queues** o crear un lock distribuido; si no, dejar `Always On` y una sola instancia para la demo.
+8. **Observabilidad:** agregar un endpoint `/health` y Application Insights para enterarse de fallos antes que el usuario. Hoy la señal disponible es el estado `Fallido` en `outbox` y `Exito = false` en `inferencias_ia`.
+9. **Persistencia de archivos:** `App_Data/uploads` es disco local de App Service; para producción conviene Azure Blob Storage y guardar la URL en `"documentos"."Ruta"`.
 
 ---
 
