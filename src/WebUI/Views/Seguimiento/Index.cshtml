@@ -1,0 +1,331 @@
+@model SeguimientoViewModel
+@{
+    ViewData["Title"] = "Estado de su reclamación";
+}
+
+<div class="container py-3" style="max-width: 780px;">
+    <!-- Encabezado del expediente -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <span class="text-uppercase text-muted fw-semibold small tracking-wide">
+                        Consulta y Auditoría de Siniestro
+                    </span>
+                    <h1 class="h3 fw-bold text-dark mt-1 mb-2">Estado de su reclamación</h1>
+                    <div class="d-inline-flex align-items-center gap-2 bg-light border rounded px-3 py-1">
+                        <span class="text-muted small">Radicado / Token:</span>
+                        <code class="fw-bold text-primary fs-6 mb-0">@Model.PublicToken</code>
+                    </div>
+                    <div class="alert alert-light border mt-3 mb-0" role="alert">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <div class="fw-semibold small">Avisos por Telegram</div>
+                                <div class="text-muted small">
+                                    @if (Model.TieneTelegram)
+                                    {
+                                        <span>Ya recibirá las novedades de su radicado en Telegram.</span>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(Model.TelegramLink))
+                                    {
+                                        <span>Toque el botón una vez para activar los avisos.</span>
+                                    }
+                                    else
+                                    {
+                                        <span>El canal de Telegram aún no está configurado.</span>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(Model.TelegramLink))
+                            {
+                                <a class="btn btn-outline-primary btn-sm" href="@Model.TelegramLink" target="_blank"
+                                   rel="noopener">
+                                    Activar Telegram
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    @if (Model.EsCompleto)
+                    {
+                        <span
+                            class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6">
+                            ● Expediente completo
+                        </span>
+                    }
+                    else
+                    {
+                        <span
+                            class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 fs-6">
+                            ● Documentación pendiente
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <!-- Mensaje principal de estado -->
+            <div class="alert @(Model.EsCompleto ? "alert-success" : "alert-warning") border-0 border-start border-4 @(Model.EsCompleto ? "border-success" : "border-warning") mt-4 mb-0"
+                 role="alert">
+                <div class="fw-semibold mb-1">
+                    @(Model.EsCompleto ? "Validación documental al día" : "Acción requerida sobre el expediente")
+                </div>
+                <div>@Model.Mensaje</div>
+            </div>
+
+            <!-- Fechas de cierre y límite -->
+            @if (Model.CompletadoEl.HasValue)
+            {
+                <div class="alert alert-info border-0 border-start border-4 border-info mt-3 mb-0" role="alert">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 small">
+                        <span>
+                            Expediente completado el: <strong>@Model.CompletadoEl.Value.ToString("dd/MM/yyyy")</strong>
+                        </span>
+                        <span>
+                            Fecha límite de respuesta: <strong>@Model.FechaLimite!.Value.ToString("dd/MM/yyyy")</strong>
+                        </span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Resumen documental -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+            <h2 class="h6 fw-bold text-dark mb-0">Detalle de soportes documentales</h2>
+        </div>
+
+        <div class="card-body p-4 d-flex flex-column gap-4">
+            <!-- Soportes recibidos -->
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="h6 fw-semibold text-success mb-0">Soportes recibidos</h3>
+                    <span class="badge bg-success-subtle text-success">@Model.RecibidosNombres.Count</span>
+                </div>
+
+                @if (Model.RecibidosNombres.Count > 0)
+                {
+                    <ul class="list-group list-group-flush border rounded">
+                        @foreach (var d in Model.RecibidosNombres)
+                        {
+                            <li class="list-group-item d-flex align-items-center gap-2 py-2">
+                                <span class="badge bg-success rounded-circle p-1">✓</span>
+                                <span>@d</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted small mb-0 fst-italic">Aún no se registran soportes validados.</p>
+                }
+            </div>
+
+            <!-- Soportes faltantes -->
+            @if (Model.FaltanNombres.Count > 0)
+            {
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h3 class="h6 fw-semibold text-warning-emphasis mb-0">Documentos faltantes</h3>
+                        <span class="badge bg-warning-subtle text-warning-emphasis">@Model.FaltanNombres.Count</span>
+                    </div>
+                    <ul class="list-group list-group-flush border border-warning-subtle rounded">
+                        @foreach (var d in Model.FaltanNombres)
+                        {
+                            <li class="list-group-item list-group-item-warning d-flex align-items-center gap-2 py-2">
+                                <span class="fw-bold">!</span>
+                                <span>@d</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <!-- Soportes no válidos -->
+            @if (Model.InvalidosNombres.Count > 0)
+            {
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h3 class="h6 fw-semibold text-danger mb-0">Recibidos pero no válidos</h3>
+                        <span class="badge bg-danger-subtle text-danger">@Model.InvalidosNombres.Count</span>
+                    </div>
+                    <ul class="list-group list-group-flush border border-danger-subtle rounded">
+                        @foreach (var d in Model.InvalidosNombres)
+                        {
+                            <li class="list-group-item list-group-item-danger d-flex align-items-center gap-2 py-2">
+                                <span class="fw-bold">✕</span>
+                                <span>@d</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Formulario para complementar documentos -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+            <h2 class="h6 fw-bold text-dark mb-0">Agregar o reemplazar documentos</h2>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small mb-3">
+                Seleccione uno o varios archivos desde su dispositivo para completar su expediente de reclamación.
+            </p>
+
+            <form asp-action="Complementar" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="PublicToken" />
+
+                <div asp-validation-summary="All" class="alert alert-danger small"></div>
+
+                <div class="mb-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <span class="form-label fw-medium mb-0">Archivos de soporte</span>
+                        <label for="inputArchivos" id="lblArchivos" class="btn btn-outline-primary mb-0">
+                            Adjuntar documentos
+                        </label>
+                    </div>
+
+                    <input id="inputArchivos" asp-for="Archivos" type="file" multiple class="visually-hidden" />
+                    <span asp-validation-for="Archivos" class="text-danger small"></span>
+                    <div class="form-text">
+                        Puede seleccionar varios archivos a la vez y volver a usar el botón para agregar más.
+                    </div>
+
+                    <ul id="listaArchivos" class="list-group list-group-flush border rounded bg-white mt-3"></ul>
+                    <button type="button" id="btnLimpiarArchivos"
+                            class="btn btn-link btn-sm text-danger p-0 text-decoration-none mt-2 d-none">
+                        Quitar todos
+                    </button>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                        Enviar documentos
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        (function () {
+            const inputArchivos = document.getElementById("inputArchivos");
+            const lblArchivos = document.getElementById("lblArchivos");
+            const btnLimpiar = document.getElementById("btnLimpiarArchivos");
+            const listaArchivos = document.getElementById("listaArchivos");
+
+            if (!inputArchivos || typeof DataTransfer === "undefined") return;
+
+            let archivosAcumulados = new DataTransfer();
+
+            function formatearTamano(bytes) {
+                if (bytes === 0) return "0 B";
+                const k = 1024;
+                const sizes = ["B", "KB", "MB", "GB"];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+            }
+
+            function renderizarLista() {
+                const files = archivosAcumulados.files;
+
+                lblArchivos.textContent = files.length === 0
+                    ? "Adjuntar documentos"
+                    : "+ Agregar más documentos";
+                btnLimpiar.classList.toggle("d-none", files.length === 0);
+
+                listaArchivos.innerHTML = "";
+
+                if (files.length === 0) {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item text-muted small";
+                    li.textContent = "Aún no hay documentos seleccionados.";
+                    listaArchivos.appendChild(li);
+                    return;
+                }
+
+                Array.from(files).forEach((file, index) => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item d-flex justify-content-between align-items-center py-2 px-3 gap-2";
+
+                    const infoDiv = document.createElement("div");
+                    infoDiv.className = "text-truncate";
+
+                    const nombreSpan = document.createElement("span");
+                    nombreSpan.className = "fw-medium text-dark small";
+                    nombreSpan.textContent = file.name;
+
+                    const tamanoSpan = document.createElement("span");
+                    tamanoSpan.className = "text-muted small ms-2";
+                    tamanoSpan.textContent = `(${formatearTamano(file.size)})`;
+
+                    infoDiv.appendChild(nombreSpan);
+                    infoDiv.appendChild(tamanoSpan);
+
+                    const btnQuitar = document.createElement("button");
+                    btnQuitar.type = "button";
+                    btnQuitar.className = "btn btn-outline-danger btn-sm py-0 px-2";
+                    btnQuitar.textContent = "✕";
+                    btnQuitar.title = "Quitar archivo";
+                    btnQuitar.addEventListener("click", function () {
+                        eliminarArchivo(index);
+                    });
+
+                    li.appendChild(infoDiv);
+                    li.appendChild(btnQuitar);
+                    listaArchivos.appendChild(li);
+                });
+            }
+
+            function agregarArchivos(nuevosFiles) {
+                if (!nuevosFiles || nuevosFiles.length === 0) return;
+
+                Array.from(nuevosFiles).forEach((nuevoFile) => {
+                    const yaExiste = Array.from(archivosAcumulados.files).some(
+                        (f) => f.name === nuevoFile.name && f.size === nuevoFile.size
+                    );
+                    if (!yaExiste) {
+                        archivosAcumulados.items.add(nuevoFile);
+                    }
+                });
+
+                inputArchivos.files = archivosAcumulados.files;
+                renderizarLista();
+            }
+
+            function eliminarArchivo(indiceAEliminar) {
+                const nuevaColeccion = new DataTransfer();
+
+                Array.from(archivosAcumulados.files).forEach((file, idx) => {
+                    if (idx !== indiceAEliminar) {
+                        nuevaColeccion.items.add(file);
+                    }
+                });
+
+                archivosAcumulados = nuevaColeccion;
+                inputArchivos.files = archivosAcumulados.files;
+                renderizarLista();
+            }
+
+            inputArchivos.addEventListener("change", function () {
+                agregarArchivos(this.files);
+            });
+
+            btnLimpiar.addEventListener("click", function () {
+                archivosAcumulados = new DataTransfer();
+                inputArchivos.files = archivosAcumulados.files;
+                renderizarLista();
+            });
+
+            renderizarLista();
+        })();
+    </script>
+}

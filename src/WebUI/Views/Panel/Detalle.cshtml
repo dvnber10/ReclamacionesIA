@@ -1,0 +1,587 @@
+@model PanelDetalle
+@{
+    ViewData["Title"] = $"Detalle del caso · {Model.Token}";
+    var docActual = Model.DocumentoSeleccionado.HasValue
+        ? Model.Documentos.FirstOrDefault(d => d.Id == Model.DocumentoSeleccionado.Value)
+        : null;
+
+    string Formato(TimeSpan? t)
+    {
+        if (!t.HasValue) return "—";
+        if (t.Value.Days > 0) return $"{t.Value.Days} d {t.Value.Hours} h";
+        if (t.Value.Hours > 0) return $"{t.Value.Hours} h {t.Value.Minutes} min";
+        return $"{t.Value.Minutes} min";
+    }
+
+    string TextoPlazo()
+    {
+        if (!Model.PlazoIniciado) return "Plazo sin iniciar";
+
+        var dias = Model.DiasRestantes!.Value;
+
+        if (Model.EsFinal)
+            return dias < 0
+                ? $"Detenido · vencía hace {Math.Abs(dias)} día(s)"
+                : $"Detenido · faltaban {dias} día(s)";
+
+        if (Model.Vencido) return $"Vencido hace {Math.Abs(dias)} día(s)";
+
+        return $"{dias} día(s) restantes";
+    }
+}
+
+<div class="container-fluid py-3">
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @error
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+    <!-- Encabezado superior del caso -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 pb-3 border-bottom">
+                <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                        <span class="text-uppercase text-primary fw-semibold small">
+                            Auditoría de Reclamación
+                        </span>
+                        <span class="badge bg-light text-dark border">@Model.Estado</span>
+                        @if (Model.EsCompleto)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                Expediente completo
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                Pendiente de soportes
+                            </span>
+                        }
+                    </div>
+                    <h1 class="h3 fw-bold text-dark mb-0">
+                        Caso <code class="text-primary">@Model.Token</code>
+                    </h1>
+                </div>
+
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm px-3">
+                    ← Volver al panel
+                </a>
+            </div>
+
+            @if (Model.EsFinal)
+            {
+                <div class="alert alert-secondary border-0 border-start border-4 border-secondary mt-3 mb-0 small"
+                     role="alert">
+                    <strong>Decisión final registrada:</strong> este caso está en estado
+                    <strong>@Model.Estado</strong> y ya no admite modificaciones.
+                    El historial completo sigue disponible en el timeline.
+                </div>
+            }
+
+            <!-- Reloj del expediente -->
+            <div class="card border-0 shadow-sm mt-3 mb-0">
+                <div
+                    class="card-header bg-white border-bottom py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h2 class="h6 fw-bold text-dark mb-0">Reloj del expediente</h2>
+
+                    @if (Model.EsFinal)
+                    {
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            Finalizado · @Formato(Model.TiempoRespuesta)
+                        </span>
+                    }
+                    else if (Model.Vencido)
+                    {
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Vencido</span>
+                    }
+                    else if (Model.EnRiesgo)
+                    {
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">3 días o menos</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-light text-dark border">En curso</span>
+                    }
+                </div>
+
+                <div class="card-body p-3">
+                    <div class="row g-3 small">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="text-muted">Radicado</div>
+                            <div class="fw-semibold text-dark">@Model.CreadoEn.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="text-muted">Inicio del plazo legal</div>
+                            <div class="fw-semibold text-dark">
+                                @(Model.PlazoIniciado
+                                    ? Model.CompletadoEl!.Value.ToString("dd/MM/yyyy")
+                                    : "Aún no arranca")
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="text-muted">Fecha límite</div>
+                            <div class="fw-semibold text-dark">
+                                @(Model.FechaLimite?.ToString("dd/MM/yyyy") ?? "—")
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="text-muted">
+                                @(Model.EsFinal ? "Respuesta del analista" : "Tiempo transcurrido desde la radicación")
+                            </div>
+                            <div class="h5 fw-bold text-primary mb-0">@Formato(Model.TiempoRespuesta)</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        @if (Model.PlazoIniciado)
+                        {
+                            <span
+                                class="badge @(Model.Vencido && !Model.EsFinal ? "bg-danger-subtle text-danger" : Model.EnRiesgo && !Model.EsFinal ? "bg-danger-subtle text-danger" : "bg-info-subtle text-info-emphasis") border">
+                                @TextoPlazo()
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-light text-dark border">Plazo sin iniciar</span>
+                        }
+
+                        @if (Model.EsFinal)
+                        {
+                            <span
+                                class="badge @(Model.DentroDelPlazo ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") border">
+                                @(Model.DentroDelPlazo ? "Dentro del plazo" : "Fuera del plazo")
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                Finalizado: @Model.FinalizadoEn?.ToString("dd/MM/yyyy HH:mm")
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos del reclamante y asegurado -->
+            <div class="row g-3 pt-3 small">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="text-muted">Beneficiario</div>
+                    <div class="fw-semibold text-dark">@Model.Beneficiario</div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="text-muted">Asegurado</div>
+                    <div class="fw-semibold text-dark">@Model.Asegurado</div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="text-muted">Correo</div>
+                    <div class="fw-medium text-dark text-truncate">@Model.Email</div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="text-muted">Teléfono</div>
+                    <div class="fw-medium text-dark">@Model.Telefono</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fila 1: Clasificación, Expediente y Decisiones del caso -->
+    <div class="row g-4 mb-4">
+        <!-- Clasificación y relato -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3 px-4">
+                    <h2 class="h6 fw-bold text-dark mb-0">Clasificación y relato</h2>
+                </div>
+                <div class="card-body p-4 d-flex flex-column gap-3">
+                    <div class="row g-3 small">
+                        <div class="col-sm-6">
+                            <div class="text-muted">Tipo inferido</div>
+                            <div class="fw-semibold text-dark">
+                                @Model.TipoInferido
+                                <span class="text-muted fw-normal">
+                                    (confianza @(Model.Confianza?.ToString("0.00") ?? "—"))
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-muted">Tipo efectivo</div>
+                            <div class="fw-semibold text-dark">
+                                @Model.TipoEfectivo
+                                @if (Model.TipoConfirmado.HasValue)
+                                {
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle ms-1">
+                                        Confirmado por humano
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-muted">Fecha completado</div>
+                            <div class="fw-medium text-dark">
+                                @(Model.CompletadoEl?.ToString("dd/MM/yyyy") ?? "—")
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-muted">Fecha límite</div>
+                            <div class="fw-medium text-dark">
+                                @(Model.FechaLimite?.ToString("dd/MM/yyyy") ?? "—")
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light border rounded">
+                        <div class="small fw-semibold text-muted mb-1">Relato del siniestro</div>
+                        <p class="small text-dark mb-0" style="white-space: pre-line;">@Model.Relato</p>
+                    </div>
+
+                    <!-- Formulario: Confirmar tipo -->
+                    @if (!Model.EsFinal)
+                    {
+                        <div class="border-top pt-3 mt-auto">
+                            <h3 class="h6 fw-semibold text-dark mb-2">Confirmar tipo de reclamación</h3>
+                            <form asp-action="ConfirmarTipo" method="post" class="row g-2 align-items-center">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <div class="col-sm-8">
+                                    <select name="tipo" class="form-select form-select-sm">
+                                        @foreach (var t in Enum.GetValues<ClaimType>())
+                                        {
+                                            if (t == Model.TipoEfectivo)
+                                            {
+                                                <option value="@((int)t)" selected>@t</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@((int)t)">@t</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-sm-4">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                                        Confirmar tipo
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado del expediente y decisión humana -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3 px-4">
+                    <h2 class="h6 fw-bold text-dark mb-0">Estado del expediente y resolución</h2>
+                </div>
+                <div class="card-body p-4 d-flex flex-column gap-3">
+                    @if (Model.EsCompleto)
+                    {
+                        <div class="alert alert-success border-0 border-start border-4 border-success mb-0 small"
+                             role="alert">
+                            <strong>Expediente completo:</strong> todos los soportes requeridos están cubiertos.
+                        </div>
+                    }
+                    else
+                    {
+                        @if (Model.Faltan.Count > 0)
+                        {
+                            <div class="alert alert-warning border-0 border-start border-4 border-warning mb-0 small"
+                                 role="alert">
+                                <strong>Documentos faltantes:</strong> @string.Join(", ", Model.Faltan)
+                            </div>
+                        }
+                        @if (Model.Invalidos.Count > 0)
+                        {
+                            <div class="alert alert-danger border-0 border-start border-4 border-danger mb-0 small"
+                                 role="alert">
+                                <strong>Documentos no válidos:</strong> @string.Join("; ", Model.Invalidos)
+                            </div>
+                        }
+                    }
+
+                    <!-- Formulario: Decisión humana -->
+                    @if (Model.EsFinal)
+                    {
+                        var ultimaDecision = Model.Decisiones.LastOrDefault();
+
+                        <div class="p-3 bg-light border rounded">
+                            <div class="small fw-semibold text-muted mb-1">Decisión registrada</div>
+                            <div class="fw-semibold text-dark">@Model.Estado</div>
+
+                            @if (Model.MontoIndemnizacion.HasValue)
+                            {
+                                <div class="mt-1 fw-bold text-success">
+                                    Valor de la indemnización: $@Model.MontoIndemnizacion.Value.ToString("N2")
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(ultimaDecision?.Notas))
+                            {
+                                <div class="small text-muted mt-1">
+                                    <em>@ultimaDecision!.Notas</em>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="border-top pt-3 mt-auto">
+                            <h3 class="h6 fw-semibold text-dark mb-2">Registrar decisión humana</h3>
+                            <form asp-action="RegistrarDecision" method="post" class="row g-2">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+
+                                <div class="col-sm-5">
+                                    <select name="accion" id="accion" class="form-select form-select-sm">
+                                        @foreach (var a in Enum.GetValues<DecisionAction>())
+                                        {
+                                            <option value="@((int)a)">@a</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-sm-7">
+                                    <input name="notas" class="form-control form-control-sm"
+                                           placeholder="Notas o justificación (opcional)" />
+                                </div>
+
+                                <div class="col-12" id="grupo-monto" style="display:none;">
+                                    <label for="montoIndemnizacion" class="form-label small fw-medium mb-1">
+                                        Valor de la indemnización
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">$</span>
+                                        <input id="montoIndemnizacion" name="montoIndemnizacion" type="number" step="0.01"
+                                               min="0.01" class="form-control" placeholder="Ej. 15000000" />
+                                    </div>
+                                    <div class="form-text">
+                                        El valor lo decide y digita el analista. El sistema no lo calcula ni lo sugiere.
+                                    </div>
+                                </div>
+
+                                <div class="col-12 d-flex justify-content-end pt-1">
+                                    <button type="submit" class="btn btn-danger btn-sm px-4 fw-semibold">
+                                        Registrar decisión
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fila 2: Mesa de documentos y revisión humana (ancho completo) -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+            <h2 class="h6 fw-bold text-dark mb-0">Documentos y revisión humana</h2>
+            <span class="badge bg-secondary-subtle text-dark">@Model.Documentos.Count() archivos</span>
+        </div>
+
+        <div class="card-body p-4">
+            @if (!Model.Documentos.Any())
+            {
+                <p class="text-muted small mb-0">No hay documentos cargados en este caso.</p>
+            }
+            else
+            {
+                <div class="row g-4">
+                    <!-- Columna izquierda: Lista de documentos -->
+                    <div class="col-lg-4">
+                        <div class="list-group">
+                            @foreach (var d in Model.Documentos)
+                            {
+                                var activo = docActual is not null && docActual.Id == d.Id;
+                                <a asp-action="Detalle" asp-route-id="@Model.Id" asp-route-doc="@d.Id"
+                                   class="list-group-item list-group-item-action py-3 @(activo ? "active" : "")">
+                                    <div class="fw-semibold small text-break">@d.NombreArchivo</div>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        <span class="badge @(activo ? "bg-light text-dark" : "bg-light text-dark border")">
+                                            @d.TipoDetectado
+                                        </span>
+                                        <span class="badge @(activo ? "bg-dark text-white" : "bg-secondary-subtle text-dark")">
+                                            @d.Validacion
+                                        </span>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Columna derecha: Visor + Revisión humana -->
+                    <div class="col-lg-8">
+                        @if (docActual is not null)
+                        {
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <div class="fw-semibold text-dark small text-break">
+                                    Vista previa: @docActual.NombreArchivo
+                                </div>
+                                <a asp-action="Ver" asp-route-id="@docActual.Id" target="_blank"
+                                   class="btn btn-outline-secondary btn-sm">
+                                    Abrir en otra pestaña ↗
+                                </a>
+                            </div>
+
+                            <div class="border rounded overflow-hidden bg-light mb-4">
+                                <iframe src="@Url.Action("Ver", "Panel", new { id = docActual.Id })" class="w-100 d-block"
+                                        style="height: 460px; border: 0;"></iframe>
+                            </div>
+
+                            <!-- Formulario de revisión humana -->
+                            <div class="p-3 bg-light border rounded">
+                                <h3 class="h6 fw-bold text-dark mb-2">Revisión humana del soporte</h3>
+
+                                @if (docActual.RevisadoPor is not null)
+                                {
+                                    <div class="alert alert-secondary py-2 px-3 small mb-3">
+                                        Revisado por <strong>@docActual.RevisadoPor</strong>
+                                        el <strong>@docActual.RevisadoEn?.ToString("g")</strong>
+                                        @if (!string.IsNullOrWhiteSpace(docActual.RevisionNotas))
+                                        {
+                                            <span>· <em>@docActual.RevisionNotas</em></span>
+                                        }
+                                    </div>
+                                }
+
+                                @if (!Model.EsFinal)
+                                {
+                                    <form asp-action="RegistrarRevisionDocumento" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@Model.Id" />
+                                        <input type="hidden" name="documentoId" value="@docActual.Id" />
+
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <label class="form-label small fw-medium">Tipo real del soporte</label>
+                                                <select name="tipo" class="form-select form-select-sm">
+                                                    <option value="">Sin tipo</option>
+                                                    @foreach (var t in Enum.GetValues<RequiredDocument>())
+                                                    {
+                                                        if (t == docActual.TipoDetectado)
+                                                        {
+                                                            <option value="@((int)t)" selected>@t</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            <option value="@((int)t)">@t</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-medium">Resultado de la revisión</label>
+                                                <select name="validacion" class="form-select form-select-sm">
+                                                    @foreach (var v in Enum.GetValues<DocumentValidation>())
+                                                    {
+                                                        if (v == docActual.Validacion)
+                                                        {
+                                                            <option value="@((int)v)" selected>@v</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            <option value="@((int)v)">@v</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            <div class="col-md-3 d-flex align-items-end">
+                                                <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                                                    Guardar revisión
+                                                </button>
+                                            </div>
+
+                                            <div class="col-12 mt-2">
+                                                <input name="notas" class="form-control form-control-sm"
+                                                       placeholder="Motivo o notas de la revisión..." />
+                                            </div>
+                                        </div>
+                                    </form>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-5 border rounded bg-light">
+                                Seleccione un documento de la lista para previsualizarlo y auditarlo.
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Fila 3: Timeline de auditoría -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+            <h2 class="h6 fw-bold text-dark mb-0">Timeline de auditoría</h2>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Fecha / Hora</th>
+                        <th>Evento</th>
+                        <th>Actor</th>
+                        <th class="pe-4">Detalle (Payload)</th>
+                    </tr>
+                </thead>
+                <tbody class="small">
+                    @if (!Model.Eventos.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                No hay eventos registrados en el historial.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var e in Model.Eventos)
+                        {
+                            <tr>
+                                <td class="ps-4 text-nowrap text-muted">@e.OcurridoEn.ToString("g")</td>
+                                <td class="fw-semibold text-dark text-nowrap">@e.Tipo</td>
+                                <td class="text-nowrap"><em>@e.Actor</em></td>
+                                <td class="pe-4">
+                                    <code class="text-break d-inline-block" style="max-width: 680px;">@e.PayloadJson</code>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+            (function () {
+                const accion = document.getElementById('accion');
+                const grupo = document.getElementById('grupo-monto');
+                const monto = document.getElementById('montoIndemnizacion');
+
+                function actualizar() {
+                    if (!accion || !grupo || !monto) return;
+
+                    const esPagar = accion.value === '@((int)DecisionAction.Pagar)';
+
+                    grupo.style.display = esPagar ? '' : 'none';
+                    monto.required = esPagar;
+
+                    if (!esPagar) monto.value = '';
+                }
+
+                if (accion) {
+                    accion.addEventListener('change', actualizar);
+                    actualizar();
+                }
+            })();
+    </script>
+
+</div>

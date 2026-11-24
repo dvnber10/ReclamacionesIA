@@ -1,0 +1,238 @@
+@model RadicarViewModel
+@{
+    ViewData["Title"] = "Radicar reclamación";
+}
+
+<div class="container py-3" style="max-width: 780px;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+            <!-- Encabezado -->
+            <div class="border-bottom pb-3 mb-4">
+                <span class="text-uppercase text-primary fw-semibold small">
+                    Portal de Reclamaciones y Auditoría
+                </span>
+                <h1 class="h3 fw-bold text-dark mt-1 mb-2">Radicar una reclamación</h1>
+                <p class="text-muted mb-0">
+                    Cuéntenos qué ocurrió y adjunte los documentos que tenga.
+                    <strong class="text-dark">No necesita crear un usuario.</strong>
+                </p>
+            </div>
+
+            <form id="radicarForm" asp-action="Index" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="EventId" />
+
+                <div asp-validation-summary="All" class="alert alert-danger small mb-4"></div>
+
+                <!-- Sección 1: Datos de quien radica -->
+                <h2 class="h6 fw-bold text-uppercase text-muted mb-3">1. Datos del reclamante / beneficiario</h2>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="BeneficiaryName" class="form-label fw-medium">Su nombre</label>
+                        <input asp-for="BeneficiaryName" class="form-control" placeholder="Ej. María Fernanda López" />
+                        <span asp-validation-for="BeneficiaryName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="BeneficiaryDocument" class="form-label fw-medium">Su documento</label>
+                        <input asp-for="BeneficiaryDocument" class="form-control"
+                               placeholder="Número de identificación" />
+                        <span asp-validation-for="BeneficiaryDocument" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="BeneficiaryEmail" class="form-label fw-medium">Correo electrónico</label>
+                        <input asp-for="BeneficiaryEmail" type="email" class="form-control"
+                               placeholder="correo@ejemplo.com" />
+                        <span asp-validation-for="BeneficiaryEmail" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="BeneficiaryPhone" class="form-label fw-medium">Celular</label>
+                        <input asp-for="BeneficiaryPhone" type="tel" class="form-control"
+                               placeholder="Ej. 300 123 4567" />
+                        <span asp-validation-for="BeneficiaryPhone" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Datos del asegurado -->
+                <h2 class="h6 fw-bold text-uppercase text-muted mb-3">2. Datos del asegurado</h2>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="InsuredName" class="form-label fw-medium">Nombre del asegurado</label>
+                        <input asp-for="InsuredName" class="form-control"
+                               placeholder="Si es distinto, indíquelo aquí" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="InsuredDocument" class="form-label fw-medium">Documento del asegurado</label>
+                        <input asp-for="InsuredDocument" class="form-control" placeholder="Número de identificación" />
+                    </div>
+                </div>
+
+                <!-- Sección 3: Relato y soportes -->
+                <h2 class="h6 fw-bold text-uppercase text-muted mb-3">3. Detalle del hecho y documentos</h2>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label asp-for="FreeText" class="form-label fw-medium">¿Qué ocurrió?</label>
+                        <textarea asp-for="FreeText" class="form-control" rows="4"
+                                  placeholder="Describa brevemente la fecha, lugar y cómo ocurrieron los hechos..."></textarea>
+                        <span asp-validation-for="FreeText" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="p-3 bg-light border rounded">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <span class="form-label fw-medium mb-0">Documentos de soporte</span>
+                                <label for="inputArchivos" id="lblArchivos" class="btn btn-outline-primary btn-sm mb-0">
+                                    Adjuntar documentos
+                                </label>
+                            </div>
+
+                            <input id="inputArchivos" asp-for="Archivos" type="file" multiple class="visually-hidden" />
+                            <span asp-validation-for="Archivos" class="text-danger small"></span>
+                            <div class="form-text">
+                                Puede seleccionar varios archivos a la vez y volver a usar el botón para agregar más.
+                            </div>
+
+                            <div id="contenedorListaArchivos" class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-semibold text-dark">
+                                        Documentos listos para enviar (<span id="contadorArchivos">0</span>)
+                                    </span>
+                                    <button type="button" id="btnLimpiarArchivos"
+                                            class="btn btn-link btn-sm text-danger p-0 text-decoration-none d-none">
+                                        Quitar todos
+                                    </button>
+                                </div>
+                                <ul id="listaArchivos" class="list-group list-group-flush border rounded bg-white"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 pt-2 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-lg px-4 fw-semibold">
+                            Enviar reclamación
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        (function () {
+            const inputArchivos = document.getElementById("inputArchivos");
+            const lblArchivos = document.getElementById("lblArchivos");
+            const btnLimpiar = document.getElementById("btnLimpiarArchivos");
+            const listaArchivos = document.getElementById("listaArchivos");
+            const contadorArchivos = document.getElementById("contadorArchivos");
+
+            if (!inputArchivos || typeof DataTransfer === "undefined") return;
+
+            let archivosAcumulados = new DataTransfer();
+
+            function formatearTamano(bytes) {
+                if (bytes === 0) return "0 B";
+                const k = 1024;
+                const sizes = ["B", "KB", "MB", "GB"];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+            }
+
+            function renderizarLista() {
+                const files = archivosAcumulados.files;
+
+                contadorArchivos.textContent = files.length;
+                lblArchivos.textContent = files.length === 0
+                    ? "Adjuntar documentos"
+                    : "+ Agregar más documentos";
+                btnLimpiar.classList.toggle("d-none", files.length === 0);
+
+                listaArchivos.innerHTML = "";
+
+                if (files.length === 0) {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item text-muted small";
+                    li.textContent = "Aún no hay documentos seleccionados.";
+                    listaArchivos.appendChild(li);
+                    return;
+                }
+
+                Array.from(files).forEach((file, index) => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item d-flex justify-content-between align-items-center py-2 px-3 gap-2";
+
+                    const infoDiv = document.createElement("div");
+                    infoDiv.className = "text-truncate";
+
+                    const nombreSpan = document.createElement("span");
+                    nombreSpan.className = "fw-medium text-dark small";
+                    nombreSpan.textContent = file.name;
+
+                    const tamanoSpan = document.createElement("span");
+                    tamanoSpan.className = "text-muted small ms-2";
+                    tamanoSpan.textContent = `(${formatearTamano(file.size)})`;
+
+                    infoDiv.appendChild(nombreSpan);
+                    infoDiv.appendChild(tamanoSpan);
+
+                    const btnQuitar = document.createElement("button");
+                    btnQuitar.type = "button";
+                    btnQuitar.className = "btn btn-outline-danger btn-sm py-0 px-2";
+                    btnQuitar.textContent = "✕";
+                    btnQuitar.title = "Quitar archivo";
+                    btnQuitar.addEventListener("click", function () {
+                        eliminarArchivo(index);
+                    });
+
+                    li.appendChild(infoDiv);
+                    li.appendChild(btnQuitar);
+                    listaArchivos.appendChild(li);
+                });
+            }
+
+            function agregarArchivos(nuevosFiles) {
+                if (!nuevosFiles || nuevosFiles.length === 0) return;
+
+                Array.from(nuevosFiles).forEach((nuevoFile) => {
+                    const yaExiste = Array.from(archivosAcumulados.files).some(
+                        (f) => f.name === nuevoFile.name && f.size === nuevoFile.size
+                    );
+                    if (!yaExiste) {
+                        archivosAcumulados.items.add(nuevoFile);
+                    }
+                });
+
+                inputArchivos.files = archivosAcumulados.files;
+                renderizarLista();
+            }
+
+            function eliminarArchivo(indiceAEliminar) {
+                const nuevaColeccion = new DataTransfer();
+
+                Array.from(archivosAcumulados.files).forEach((file, idx) => {
+                    if (idx !== indiceAEliminar) {
+                        nuevaColeccion.items.add(file);
+                    }
+                });
+
+                archivosAcumulados = nuevaColeccion;
+                inputArchivos.files = archivosAcumulados.files;
+                renderizarLista();
+            }
+
+            inputArchivos.addEventListener("change", function () {
+                agregarArchivos(this.files);
+            });
+
+            btnLimpiar.addEventListener("click", function () {
+                archivosAcumulados = new DataTransfer();
+                inputArchivos.files = archivosAcumulados.files;
+                renderizarLista();
+            });
+
+            renderizarLista();
+        })();
+    </script>
+}

@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = "Acceso analistas";
+}
+
+<div class="container py-5" style="max-width: 420px;">
+    <h1 class="h4">Acceso analistas</h1>
+
+    <form asp-action="Login" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+        <div class="mb-3">
+            <label class="form-label">Correo</label>
+            <input name="email" type="email" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <input name="password" type="password" class="form-control" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+</div>

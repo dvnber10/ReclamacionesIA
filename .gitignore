@@ -1,0 +1,30 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+
+# IDE / editor / OS
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+.DS_Store
+Thumbs.db
+
+# Secretos y configuración local
+secrets.json
+*.pfx
+*.publishsettings
+appsettings.*.local.json
+
+# Datos generados en ejecución
+src/WebUI/App_Data/uploads/
+*.log
+*.db
+*.sqlite
+
+# Las librerías cliente locales (Bootstrap/jQuery) SÍ se versionan:
+# el layout las sirve desde ~/lib/bootstrap y ~/lib/jquery.

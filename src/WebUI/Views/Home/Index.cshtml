@@ -1,0 +1,117 @@
+﻿@{
+    ViewData["Title"] = "Inicio · Auditoría y Reclamaciones";
+}
+
+<div class="py-3">
+    <!-- Hero principal -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4 p-md-5">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 mb-3">
+                        Audita tus reclamaciones · Gestión de Siniestros
+                    </span>
+                    <h1 class="display-6 fw-bold text-dark mb-3">
+                        Radica, audita y haz seguimiento a tus reclamaciones con total claridad
+                    </h1>
+                    <p class="text-muted fs-6 mb-4">
+                        Registra tu reclamación sin necesidad de crear un usuario, adjunta tus documentos de soporte
+                        y consulta en cualquier momento el estado de validación de tu expediente.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <a asp-controller="Radicar" asp-action="Index" class="btn btn-primary btn-lg px-4 fw-semibold">
+                            Radicar reclamación
+                        </a>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a asp-controller="Panel" asp-action="Index" class="btn btn-outline-secondary btn-lg px-4">
+                                Ir al panel de auditoría
+                            </a>
+                        }
+                        else
+                        {
+                            <a asp-controller="Cuenta" asp-action="Login" class="btn btn-outline-secondary btn-lg px-4">
+                                Acceso analista
+                            </a>
+                        }
+                    </div>
+                </div>
+
+                <!-- Consulta rápida por número de seguimiento -->
+                <div class="col-lg-4">
+                    <div class="p-4 bg-light border rounded">
+                        <h2 class="h6 fw-bold text-dark mb-1">Consultar estado de un caso</h2>
+                        <p class="small text-muted mb-3">
+                            Ingrese su número de seguimiento para revisar soportes o complementar documentos.
+                        </p>
+                        <form asp-controller="Seguimiento" asp-action="Index" method="get">
+                            <div class="mb-3">
+                                <label for="tokenConsulta" class="form-label small fw-medium text-dark">
+                                    Número de seguimiento
+                                </label>
+                                <input id="tokenConsulta"
+                                       name="token"
+                                       type="text"
+                                       class="form-control"
+                                       placeholder="Ej. REC-2026-XXXX"
+                                       required />
+                            </div>
+                            <button type="submit" class="btn btn-outline-primary w-100 fw-semibold">
+                                Auditar reclamación
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tres bloques informativos -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 mb-3 fw-semibold">
+                        01 · Radicación
+                    </div>
+                    <h2 class="h6 fw-bold text-dark">Registro sin fricción</h2>
+                    <p class="small text-muted mb-0">
+                        Complete los datos del beneficiario y asegurado, relate lo ocurrido y cargue uno o varios
+                        documentos desde un único formulario.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="badge bg-success-subtle text-success rounded-pill px-3 py-2 mb-3 fw-semibold">
+                        02 · Auditoría documental
+                    </div>
+                    <h2 class="h6 fw-bold text-dark">Estado claro del expediente</h2>
+                    <p class="small text-muted mb-0">
+                        Verifique qué soportes ya fueron recibidos, cuáles faltan o requieren corrección y envíe
+                        documentos faltantes sin perder el historial.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="badge bg-info-subtle text-info-emphasis rounded-pill px-3 py-2 mb-3 fw-semibold">
+                        03 · Control y trazabilidad
+                    </div>
+                    <h2 class="h6 fw-bold text-dark">Seguimiento y resolución</h2>
+                    <p class="small text-muted mb-0">
+                        Cada evento y revisión queda registrado con trazabilidad para agilizar la gestión y el
+                        control de plazos de la reclamación.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

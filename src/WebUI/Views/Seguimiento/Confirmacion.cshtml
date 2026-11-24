@@ -1,0 +1,96 @@
+@model Common.Dto.RadicarResultado
+@{
+    ViewData["Title"] = "Reclamación recibida";
+}
+
+<div class="container py-4" style="max-width: 720px;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+            <!-- Encabezado de confirmación -->
+            <div class="d-flex align-items-start gap-3 pb-4 border-bottom">
+                <span class="badge rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                      style="width: 44px; height: 44px; font-size: 1.2rem;">
+                    ✓
+                </span>
+                <div>
+                    <span class="text-uppercase text-success fw-semibold small">
+                        Radicación exitosa
+                    </span>
+                    <h1 class="h4 fw-bold text-dark mt-1 mb-1">@Model.Mensaje</h1>
+                    <p class="text-muted small mb-0">
+                        Su reclamación ha quedado registrada para revisión y auditoría.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Comprobante con número de seguimiento -->
+            <div class="bg-light border rounded p-4 my-4">
+                <div class="small text-muted fw-semibold mb-1">
+                    Número de seguimiento
+                </div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <code id="tokenSeguimiento" class="fs-5 fw-bold text-primary user-select-all">
+                        @Model.PublicToken
+                    </code>
+                    <button type="button" id="btnCopiarToken" class="btn btn-outline-secondary btn-sm">
+                        Copiar código
+                    </button>
+                </div>
+                <div id="mensajeCopiado" class="small text-success mt-2 d-none">
+                    Número de seguimiento copiado al portapapeles.
+                </div>
+            </div>
+
+            <p class="small text-muted mb-4">
+                Guarde este código para consultar el avance de su caso, revisar si faltan soportes o adjuntar documentos adicionales.
+            </p>
+
+            <!-- Botones de acción -->
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-controller="Seguimiento"
+                   asp-action="Index"
+                   asp-route-token="@Model.PublicToken"
+                   class="btn btn-primary px-4 fw-semibold">
+                    Ver estado y agregar documentos
+                </a>
+                <a asp-action="Index" class="btn btn-outline-primary px-4">
+                    Radicar otra reclamación
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const btnCopiar = document.getElementById("btnCopiarToken");
+            const tokenEl = document.getElementById("tokenSeguimiento");
+            const msgCopiado = document.getElementById("mensajeCopiado");
+
+            if (!btnCopiar || !tokenEl) return;
+
+            btnCopiar.addEventListener("click", async function () {
+                const texto = tokenEl.textContent.trim();
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(texto);
+                    } else {
+                        const aux = document.createElement("textarea");
+                        aux.value = texto;
+                        document.body.appendChild(aux);
+                        aux.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(aux);
+                    }
+                    if (msgCopiado) {
+                        msgCopiado.classList.remove("d-none");
+                        setTimeout(() => msgCopiado.classList.add("d-none"), 2500);
+                    }
+                } catch {
+                    // El texto sigue disponible para copiar manualmente
+                }
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,314 @@
+@model PanelResumen
+@{
+    ViewData["Title"] = "Panel del analista";
+
+    var estados = new List<SelectListItem> { new() { Value = "", Text = "Todos los estados" } };
+    estados.AddRange(Enum.GetValues<ClaimStatus>()
+        .Select(e => new SelectListItem(e.ToString(), ((int)e).ToString())));
+
+    var tipos = new List<SelectListItem> { new() { Value = "", Text = "Todos los tipos" } };
+    tipos.AddRange(Enum.GetValues<ClaimType>()
+        .Select(t => new SelectListItem(t.ToString(), ((int)t).ToString())));
+
+    var alertas = new[]
+    {
+        new SelectListItem("Todas", "0"),
+        new SelectListItem("En riesgo", "1"),
+        new SelectListItem("Vencidos", "2"),
+        new SelectListItem("Sin alerta", "3")
+    };
+
+    string ColorFila(PanelFila c)
+    {
+        if (c.EsFinal) return "table-light text-muted";
+        if (c.Vencido || c.EnRiesgo) return "table-danger";
+        if (c.Critico10Dias) return "table-warning";
+        if (c.RecienLlegado) return "table-primary";
+        return "";
+    }
+
+    string TextoReloj(PanelFila c)
+    {
+        if (!c.DiaDelPlazo.HasValue) return "Plazo sin iniciar";
+
+        var dias = c.DiasRestantes!.Value;
+
+        if (c.EsFinal)
+            return dias < 0
+                ? $"Detenido · vencía hace {Math.Abs(dias)} d"
+                : $"Detenido · faltaban {dias} d";
+
+        if (dias < 0) return $"Vencido hace {Math.Abs(dias)} d";
+
+        return $"{dias} d restantes";
+    }
+}
+
+<div class="container-fluid py-3">
+    <!-- Encabezado de la mesa de control -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <span class="text-uppercase text-primary fw-semibold small">
+                Auditoría y Control de Siniestros
+            </span>
+            <h1 class="h3 fw-bold text-dark mt-1 mb-0">Panel del analista</h1>
+        </div>
+        <div class="text-muted small">
+            Mostrando <strong class="text-dark">@Model.TotalFiltrados</strong> de
+            <strong class="text-dark">@Model.TotalGeneral</strong> reclamaciones
+        </div>
+    </div>
+
+    <!-- Indicadores clave (KPIs) -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small fw-medium">Abiertos</div>
+                    <div class="h3 fw-bold text-dark mt-1 mb-0">@Model.Abiertos</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small fw-medium">Radicados hoy</div>
+                    <div class="h3 fw-bold text-primary mt-1 mb-0">@Model.RadicadosHoy</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+                <div class="card-body">
+                    <div class="text-muted small fw-medium">En riesgo</div>
+                    <div class="h3 fw-bold text-danger mt-1 mb-0">@Model.EnRiesgo</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+                <div class="card-body">
+                    <div class="text-muted small fw-medium">Vencidos</div>
+                    <div class="h3 fw-bold text-danger mt-1 mb-0">@Model.Vencidos</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small fw-medium">Correcciones humanas</div>
+                    <div class="h3 fw-bold text-dark mt-1 mb-0">@Model.CorreccionesHumanas</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-xl-2">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small fw-medium">1er aviso</div>
+                    <div class="h4 fw-bold text-dark mt-1 mb-0">
+                        @if(Model.LatenciaPrimerAvisoMin.HasValue && Model.LatenciaPrimerAvisoMin.Value<1)
+                        {
+                            <span>&lt; 1</span>
+                        }
+                        else
+                        {
+                            @(Model.LatenciaPrimerAvisoMin?.ToString("N1") ?? "—")
+                        }
+                        <span class="fs-6 fw-normal text-muted">min</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de filtros -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+            <form method="get" asp-action="Index">
+                <div class="row g-3">
+                    <div class="col-md-6 col-lg-4">
+                        <label asp-for="Filtro.Texto" class="form-label small fw-semibold text-muted">
+                            Token o beneficiario
+                        </label>
+                        <input asp-for="Filtro.Texto" class="form-control" placeholder="Buscar por código o nombre..." />
+                    </div>
+
+                    <div class="col-sm-6 col-md-3 col-lg-2">
+                        <label asp-for="Filtro.Estado" class="form-label small fw-semibold text-muted">Estado</label>
+                        <select asp-for="Filtro.Estado" asp-items="estados" class="form-select"></select>
+                    </div>
+
+                    <div class="col-sm-6 col-md-3 col-lg-2">
+                        <label asp-for="Filtro.Tipo" class="form-label small fw-semibold text-muted">Tipo</label>
+                        <select asp-for="Filtro.Tipo" asp-items="tipos" class="form-select"></select>
+                    </div>
+
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <label asp-for="Filtro.Alerta" class="form-label small fw-semibold text-muted">Alerta</label>
+                        <select asp-for="Filtro.Alerta" asp-items="alertas" class="form-select"></select>
+                    </div>
+
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <label asp-for="Filtro.Desde" class="form-label small fw-semibold text-muted">Desde</label>
+                        <input asp-for="Filtro.Desde" type="date" class="form-control" />
+                    </div>
+
+                    <div class="col-sm-6 col-md-4 col-lg-2">
+                        <label asp-for="Filtro.Hasta" class="form-label small fw-semibold text-muted">Hasta</label>
+                        <input asp-for="Filtro.Hasta" type="date" class="form-control" />
+                    </div>
+
+                    <div class="col-sm-6 col-md-8 col-lg-6 d-flex align-items-end">
+                        <div class="small text-muted">
+                            @if (Model.Filtro.HayFiltros)
+                            {
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-2">
+                                    Filtros activos
+                                </span>
+                            }
+                            <span>
+                                Resultados: <strong>@Model.TotalFiltrados</strong> de <strong>@Model.TotalGeneral</strong> casos
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6 col-md-4 col-lg-4 d-flex align-items-end justify-content-lg-end gap-2">
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            Filtrar
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary px-3">
+                            Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de reclamaciones -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="h6 fw-bold text-dark mb-0">Casos en seguimiento</h2>
+            <div class="small text-muted d-flex flex-wrap align-items-center gap-3">
+                <span><span class="badge bg-primary"></span> Recién llegado</span>
+                <span><span class="badge bg-warning"></span> 10 días o menos</span>
+                <span><span class="badge bg-danger"></span> 3 días o vencido</span>
+                <span><span class="badge bg-light border text-dark"></span> Detenido</span>
+                <span>@Model.Casos.Count() en vista</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Token</th>
+                        <th>Beneficiario</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th class="text-center">Día del plazo</th>
+                        <th class="text-center">Docs</th>
+                        <th>Límite</th>
+                        <th>Alerta</th>
+                        <th class="text-end pe-4">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Casos.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5">
+                                No hay casos que coincidan con los filtros seleccionados.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var c in Model.Casos)
+                        {
+                            <tr class="@ColorFila(c)">
+                                <td class="ps-4">
+                                    <a asp-action="Detalle" asp-route-id="@c.Id" class="fw-semibold text-decoration-none">
+                                        <code>@c.Token</code>
+                                    </a>
+                                </td>
+                                <td class="fw-medium text-dark">@c.Beneficiario</td>
+                                <td>@c.Tipo</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@c.Estado</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (c.DiaDelPlazo.HasValue)
+                                    {
+                                        <div class="fw-bold @(c.Vencido ? "text-danger" : c.EnRiesgo ? "text-danger" : "text-primary")">
+                                            Día @c.DiaDelPlazo.Value
+                                        </div>
+                                        <div class="small text-muted">@TextoReloj(c)</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="small text-muted">@TextoReloj(c)</div>
+                                        @if (c.EsFinal)
+                                        {
+                                            <div class="small text-muted">Detenido</div>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill bg-secondary-subtle text-dark">@c.Documentos</span>
+                                </td>
+                                <td class="small text-muted">
+                                    @(c.FechaLimite?.ToString("dd/MM/yyyy") ?? "—")
+                                </td>
+                                <td>
+                                    @if (c.EsFinal)
+                                    {
+                                        <span class="badge bg-light text-dark border">Detenido</span>
+                                    }
+                                    else if (c.Vencido)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                            Vencido
+                                        </span>
+                                    }
+                                    else if (c.EnRiesgo)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                            3 días o menos
+                                        </span>
+                                    }
+                                    else if (c.Critico10Dias)
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            10 días o menos
+                                        </span>
+                                    }
+                                    else if (c.RecienLlegado)
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                            Recién llegado
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a asp-action="Detalle" asp-route-id="@c.Id" class="btn btn-sm btn-outline-primary">
+                                        Auditar
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
