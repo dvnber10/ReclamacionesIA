@@ -2,7 +2,7 @@ name: Deploy WebUI a Azure App Service
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
