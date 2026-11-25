@@ -12,7 +12,7 @@ Canal público de radicación + motor de clasificación con IA + panel interno p
 | README | Este archivo |
 | Las cuatro respuestas del punto 7 | [Las cuatro respuestas](#las-cuatro-respuestas-del-punto-7) |
 | Dataset mínimo de 30 radicaciones | [Dataset de prueba](#dataset-de-prueba) |
-| Video de 5 minutos | `https://www.youtube.com/watch?v=F32KqaO95TE` |
+| Video de 5 minutos | `https://drive.google.com/file/d/1mjJE1REwimXxnIQI0Y-MiA2xdrjeLO2g/view?usp=sharing` |
 | Accesos a los tres correos | [Accesos](#accesos) |
 
 ---
