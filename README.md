@@ -6,13 +6,13 @@ Canal público de radicación + motor de clasificación con IA + panel interno p
 
 | Entregable | Dónde está |
 |---|---|
-| Repositorio de GitHub con acceso de lectura | [https://github.com/dvnber10/ReclamacionesIA.git] (público) |
-| Canal de radicación desplegado | `TODO_URL_CANAL` |
-| Panel del analista + usuario de prueba | `TODO_URL_PANEL` · `analista@demo.local` / `Demo123*` |
+| Repositorio de GitHub con acceso de lectura | `https://github.com/dvnber10/ReclamacionesIA.git` (público) |
+| Canal de radicación desplegado | `https://reclamacionesia-bkfvdkf8cfd4c8e2.westus-01.azurewebsites.net/` |
+| Panel del analista + usuario de prueba | `https://reclamacionesia-bkfvdkf8cfd4c8e2.westus-01.azurewebsites.net/Cuenta/Login` · `analista@demo.local` / `Demo123*` |
 | README | Este archivo |
 | Las cuatro respuestas del punto 7 | [Las cuatro respuestas](#las-cuatro-respuestas-del-punto-7) |
 | Dataset mínimo de 30 radicaciones | [Dataset de prueba](#dataset-de-prueba) |
-| Video de 5 minutos | `TODO_URL_VIDEO` |
+| Video de 5 minutos | `https://www.youtube.com/watch?v=F32KqaO95TE` |
 | Accesos a los tres correos | [Accesos](#accesos) |
 
 ---
@@ -34,6 +34,7 @@ El sistema recibe reclamaciones sin exigir usuario al beneficiario, infiere el t
 
 ## 2. Arquitectura
 
+Se selecciono una arquitectura por capas ya que mantiene el orden y la estructura para cada archivo haciendolos mas entendibles y mantenibles con el tiempo, separadi en 4 capas principales las cuales se dividen de la siguiente manera:
 ```text
 ReclamacionesIA.sln
 └── src/
@@ -97,6 +98,8 @@ dotnet user-secrets set "Email:Usuario" "<usuario-smtp>"
 dotnet user-secrets set "Email:Password" "<password-smtp>"
 dotnet user-secrets set "Email:From" "<remitente>"
 ```
+
+todos estos datos al configurarlos viven en la maquina de configuracion para no exponerlos al momento de desplegar.
 
 Verificación sin exponer valores:
 
@@ -405,21 +408,17 @@ Los avisos salen **antes** del vencimiento (`DiasAlerta = 3`), nunca después. E
 
 ## 10. Despliegue en Azure
 
-**Estado actual:** aún no hay despliegue en Azure, pero el repo ya incluye `.github/workflows/azure-webapp.yml` para publicar desde GitHub en cada push a `main`. No hay Dockerfile, `docker-compose`, `*.pubxml` ni Bicep. Para llevarlo allá haría falta:
+**Estado actual:** el código está listo para publicarse, pero **aún no hay despliegue en Azure ni infraestructura como código en el repo** (no hay Dockerfile, `docker-compose`, `*.pubxml`, Bicep ni GitHub Actions). Para llevarlo allá haría falta:
 
 1. **Base de datos:** Azure Database for PostgreSQL Flexible Server (plan gratuito/B1 para la demo), con BD `reclamaciones` y reglas de firewall que permitan el egreso de App Service.
-2. **App Service .NET 8 en Linux:** crear el App Service y, en **Deployment Center**, elegir GitHub con el repo público y la rama `main`. Si usas el workflow incluido, no actives también el que genera el portal, para evitar dos despliegues por push.
-3. **GitHub Actions:** en el repo, ir a **Settings → Secrets and variables → Actions** y crear:
-   - Variable `AZURE_WEBAPP_NAME` = nombre del App Service.
-   - Secret `AZURE_WEBAPP_PUBLISH_PROFILE` = contenido de **App Service → Get publish profile**.
-   
-   El workflow hace `restore`, `build`, `publish` de `src/WebUI/WebUI.csproj` y despliega con `azure/webapps-deploy@v3`. Alternativamente, se puede publicar a mano:
+2. **App Service .NET 8 en Linux:** publicar con:
    ```bash
    dotnet publish src/WebUI/WebUI.csproj -c Release -o ./publish
    cd publish && zip -r ../webui.zip .
-   # az webapp deployment source config-zip --resource-group TODO_RG --name TODO_APP --src ../webui.zip
+   az webapp deployment source config-zip \
+     --resource-group TODO_RG --name TODO_APP --src ../webui.zip
    ```
-4. **Configuración de la app** (en App Service → Configuration → Application settings, con doble guion bajo):
+3. **Configuración de la app** (en App Service → Configuration → Application settings, con doble guion bajo):
    ```text
    ConnectionStrings__Default        = Host=...;Port=5432;Database=reclamaciones;Username=...;Password=...
    IA__Proveedor                     = Gemini
@@ -441,27 +440,10 @@ Los avisos salen **antes** del vencimiento (`DiasAlerta = 3`), nunca después. E
 
 ---
 
-## 11. Video de 5 minutos
 
-`TODO_URL_VIDEO`
+## 11. Accesos
 
-Guion previsto:
-
-| Tiempo | Contenido |
-|---|---|
-| 0:00 – 0:45 | Problema: reloj del art. 1080 y expedientes incompletos. |
-| 0:45 – 1:30 | Arquitectura de las tres piezas y por qué web + Telegram/correo. |
-| 1:30 – 2:30 | Radicar desde el celular: un solo botón para varios documentos y adicionales. |
-| 2:30 – 3:15 | Seguimiento público: faltantes vs inválidos y reloj. |
-| 3:15 – 4:15 | Panel: KPIs, las 4 respuestas y corrección de tipo. |
-| 4:15 – 4:45 | Decisión humana: pagar con monto, objeción y auditoría. |
-| 4:45 – 5:00 | Fallback de IA y cierre. |
-
----
-
-## 12. Accesos
-
-El repositorio será **público**: basta con enviar `TODO_URL_REPO`. Igualmente se confirma acceso a:
+El repositorio será **público**: basta con enviar `https://github.com/dvnber10/ReclamacionesIA.git`. Igualmente se confirma acceso a:
 
 | Correo | Rol |
 |---|---|
@@ -469,7 +451,7 @@ El repositorio será **público**: basta con enviar `TODO_URL_REPO`. Igualmente 
 | `npinzon@globalseguros.co` | Dirección de Agilidad Empresarial |
 | `dgrijalba@globalseguros.co` | Vicepresidencia de Transformación Digital |
 
-Panel de prueba: `TODO_URL_PANEL` · `analista@demo.local` / `Demo123*`.
+Panel de prueba: `https://reclamacionesia-bkfvdkf8cfd4c8e2.westus-01.azurewebsites.net/` · `analista@demo.local` / `Demo123*`.
 
 ---
 
